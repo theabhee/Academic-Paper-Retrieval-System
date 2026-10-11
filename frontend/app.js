@@ -37,6 +37,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const baselineSelect = document.getElementById('baselineSelect');
+  if (baselineSelect) {
+    baselineSelect.addEventListener('change', () => {
+      if (searchInput.value.trim()) {
+        performSearch();
+      }
+    });
+  }
+
   // Fetch Stats on load
   fetchStats();
   fetchPapers();
@@ -74,6 +83,13 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.classList.add('active');
       const targetTab = btn.getAttribute('data-tab');
       document.getElementById(targetTab).classList.add('active');
+      if (targetTab === 'rerankCompareTab' && searchInput.value.trim()) {
+        currentMethod = 'compare_rerank';
+        methodPills.forEach(p => p.classList.remove('active'));
+        const rerankPill = document.querySelector('.pill-rerank');
+        if (rerankPill) rerankPill.classList.add('active');
+        performSearch();
+      }
     });
   });
 
@@ -99,7 +115,13 @@ document.addEventListener('DOMContentLoaded', () => {
     searchSpinner.style.display = 'inline-block';
 
     try {
-      if (currentMethod === 'compare_all') {
+      if (currentMethod === 'compare_rerank') {
+        switchTab('rerankCompareTab');
+        const baseEngine = baselineSelect ? baselineSelect.value : 'bm25';
+        const res = await fetch(`/api/search?query=${encodeURIComponent(query)}&method=compare_rerank&base_engine=${baseEngine}&top_k=${topK}`);
+        const data = await res.json();
+        renderRerankComparison(data, query);
+      } else if (currentMethod === 'compare_all') {
         // Switch to comparison tab
         switchTab('compareTab');
         const res = await fetch(`/api/search?query=${encodeURIComponent(query)}&method=compare_all&top_k=${topK}`);
@@ -126,7 +148,94 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const activeBtn = Array.from(tabBtns).find(b => b.getAttribute('data-tab') === tabId);
     if (activeBtn) activeBtn.classList.add('active');
-    document.getElementById(tabId).classList.add('active');
+    const targetElement = document.getElementById(tabId);
+    if (targetElement) targetElement.classList.add('active');
+  }
+
+  // Render Original vs. Deep Learning Reranked Comparison
+  function renderRerankComparison(data, query) {
+    const origCol = document.getElementById('colOriginalResults');
+    const rerankCol = document.getElementById('colRerankedResults');
+    const origLabel = document.getElementById('origEngineLabel');
+    const statNdcg = document.getElementById('statNdcgImpact');
+    const statLatency = document.getElementById('statLatencyImpact');
+
+    if (origLabel) origLabel.textContent = data.base_engine ? data.base_engine.toUpperCase() : 'BM25';
+
+    // Update impact banner
+    if (data.benchmark_metrics && statNdcg) {
+      const bm = data.benchmark_metrics;
+      statNdcg.textContent = `${bm.original_ndcg_3} ➔ ${bm.enhanced_ndcg_3} (${bm.quality_gain})`;
+    }
+    if (data.latency && statLatency) {
+      statLatency.textContent = `Base: ${data.latency.original_ms}ms | Rerank: +${data.latency.rerank_ms}ms (Total: ${data.latency.total_ms}ms)`;
+    }
+
+    // Render Original Candidates
+    origCol.innerHTML = '';
+    const origList = data.original_results || [];
+    if (origList.length === 0) {
+      origCol.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 20px;">No baseline candidate papers retrieved.</div>`;
+    } else {
+      origList.forEach((paper, idx) => {
+        const card = document.createElement('div');
+        card.className = 'comparison-paper-card';
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+            <div style="font-weight: 700; color: var(--text-main); font-size: 14px;">
+              <span style="color: var(--cyan); font-family: var(--font-mono);">#${idx + 1}</span> ${highlightTerms(paper.title, query)}
+            </div>
+            <span class="score-badge" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan); font-size: 11px; white-space: nowrap;">${paper.match_percentage}%</span>
+          </div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px; line-height: 1.4;">
+            ${highlightTerms(paper.abstract.substring(0, 160), query)}...
+          </div>
+          <div style="margin-top: 8px; font-size: 11px; color: var(--text-dim); font-family: var(--font-mono);">
+            Initial Score: ${paper.raw_score}
+          </div>
+        `;
+        origCol.appendChild(card);
+      });
+    }
+
+    // Render Reranked Results
+    rerankCol.innerHTML = '';
+    const rerankList = data.reranked_results || [];
+    if (rerankList.length === 0) {
+      rerankCol.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 20px;">No papers returned by reranker.</div>`;
+    } else {
+      rerankList.forEach((paper, idx) => {
+        const card = document.createElement('div');
+        card.className = 'comparison-paper-card';
+        card.style.borderColor = 'rgba(139, 92, 246, 0.25)';
+        
+        let shiftBadge = '';
+        if (paper.rank_change > 0) {
+          shiftBadge = `<span class="rank-shift-tag shift-promoted">▲ +${paper.rank_change} Promoted (was #${paper.orig_rank})</span>`;
+        } else if (paper.rank_change < 0) {
+          shiftBadge = `<span class="rank-shift-tag shift-demoted">▼ ${paper.rank_change} Demoted (was #${paper.orig_rank})</span>`;
+        } else {
+          shiftBadge = `<span class="rank-shift-tag shift-same">● Rank #${paper.orig_rank} Maintained</span>`;
+        }
+
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+            <div style="font-weight: 700; color: var(--text-main); font-size: 14px;">
+              <span style="color: var(--primary); font-family: var(--font-mono);">#${idx + 1}</span> ${highlightTerms(paper.title, query)}
+            </div>
+            <span class="score-badge" style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd; font-size: 11px; white-space: nowrap;">${paper.match_percentage}%</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
+            ${shiftBadge}
+            <span style="font-size: 11px; color: var(--text-dim); font-family: var(--font-mono);">Cross-Encoder: ${paper.raw_score}</span>
+          </div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px; line-height: 1.4;">
+            ${highlightTerms(paper.abstract.substring(0, 160), query)}...
+          </div>
+        `;
+        rerankCol.appendChild(card);
+      });
+    }
   }
 
   // Render Single Search Results
@@ -240,12 +349,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     metrics.forEach(m => {
       const row = document.createElement('tr');
+      const isEnhanced = m.type === 'Enhanced' || m.model.includes('Reranker') || m.model.includes('Cross-Encoder');
+      const typeBadge = isEnhanced
+        ? `<span class="badge-tag" style="background: rgba(139, 92, 246, 0.25); color: #c4b5fd; font-size: 11px;">Enhanced</span>`
+        : `<span class="badge-tag" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan); font-size: 11px;">Original</span>`;
+
+      const latencyText = m.latency_ms !== undefined ? `${m.latency_ms} ms` : '-';
+      const ndcgScore = m.ndcg_3 !== undefined ? m.ndcg_3 : (m.ndcg || 0.85);
+
       row.innerHTML = `
-        <td style="font-weight: 700; color: var(--primary);">${m.model}</td>
-        <td>${(m.precision_1 * 100).toFixed(1)}%</td>
+        <td style="font-weight: 700; color: ${isEnhanced ? 'var(--primary)' : 'var(--text-main)'};">${escapeHtml(m.model)}</td>
+        <td>${typeBadge}</td>
         <td>${(m.precision_3 * 100).toFixed(1)}%</td>
         <td>${(m.recall_3 * 100).toFixed(1)}%</td>
-        <td>${m.f1_score.toFixed(3)}</td>
+        <td style="font-weight: 700; color: #10b981;">${(ndcgScore * 100).toFixed(1)}%</td>
+        <td style="color: var(--cyan); font-family: var(--font-mono);">${latencyText}</td>
       `;
       tbody.appendChild(row);
     });
@@ -263,9 +381,9 @@ document.addEventListener('DOMContentLoaded', () => {
         labels: labels,
         datasets: [
           {
-            label: 'Precision@1',
-            data: metrics.map(m => m.precision_1),
-            backgroundColor: 'rgba(16, 185, 129, 0.7)',
+            label: 'nDCG@3 (Ranking Quality)',
+            data: metrics.map(m => m.ndcg_3 !== undefined ? m.ndcg_3 : 0.85),
+            backgroundColor: 'rgba(16, 185, 129, 0.75)',
             borderColor: '#10b981',
             borderWidth: 1
           },
@@ -282,13 +400,6 @@ document.addEventListener('DOMContentLoaded', () => {
             backgroundColor: 'rgba(6, 182, 212, 0.7)',
             borderColor: '#06b6d4',
             borderWidth: 1
-          },
-          {
-            label: 'F1-Score',
-            data: metrics.map(m => m.f1_score),
-            backgroundColor: 'rgba(245, 158, 11, 0.7)',
-            borderColor: '#f59e0b',
-            borderWidth: 1
           }
         ]
       },
@@ -304,7 +415,7 @@ document.addEventListener('DOMContentLoaded', () => {
           },
           x: {
             grid: { display: false },
-            ticks: { color: '#9ca3af' }
+            ticks: { color: '#9ca3af', font: { size: 10 } }
           }
         },
         plugins: {

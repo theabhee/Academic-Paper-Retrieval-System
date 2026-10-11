@@ -1,0 +1,29 @@
+System,Type,Query,Precision@3,Recall@3,nDCG@3,Latency_ms
+TF-IDF,Original,neural networks attention,0.5,0.3333333333333333,0.46927872602275644,3555.648499983363
+TF-IDF,Original,image recognition deep learning,0.3333333333333333,1.0,1.0,1.3655999791808426
+TF-IDF,Original,generative models adversarial,0.3333333333333333,1.0,1.0,0.9157999884337187
+TF-IDF,Original,word embeddings semantic relationships,1.0,1.0,1.0,0.9329000022262335
+BM25,Original,neural networks attention,0.5,0.3333333333333333,0.46927872602275644,0.1289999927394092
+BM25,Original,image recognition deep learning,0.3333333333333333,1.0,0.6309297535714575,0.0879999715834856
+BM25,Original,generative models adversarial,0.3333333333333333,1.0,1.0,0.06089999806135893
+BM25,Original,word embeddings semantic relationships,1.0,1.0,1.0,0.07609999738633633
+Semantic,Original,neural networks attention,0.6666666666666666,0.6666666666666666,0.7039180890341347,8160.40759999305
+Semantic,Original,image recognition deep learning,0.3333333333333333,1.0,1.0,35.63000005669892
+Semantic,Original,generative models adversarial,0.3333333333333333,1.0,1.0,39.61670002900064
+Semantic,Original,word embeddings semantic relationships,0.3333333333333333,1.0,1.0,32.17269998276606
+TF-IDF + Reranker,Enhanced,neural networks attention,0.5,0.3333333333333333,0.46927872602275644,35.814200004097074
+TF-IDF + Reranker,Enhanced,image recognition deep learning,0.3333333333333333,1.0,1.0,33.6824000114575
+TF-IDF + Reranker,Enhanced,generative models adversarial,0.3333333333333333,1.0,1.0,62.82439996721223
+TF-IDF + Reranker,Enhanced,word embeddings semantic relationships,1.0,1.0,1.0,16.727899957913905
+BM25 + Reranker,Enhanced,neural networks attention,0.5,0.3333333333333333,0.46927872602275644,28.25859998119995
+BM25 + Reranker,Enhanced,image recognition deep learning,0.3333333333333333,1.0,1.0,32.89120004046708
+BM25 + Reranker,Enhanced,generative models adversarial,0.3333333333333333,1.0,1.0,59.245700016617775
+BM25 + Reranker,Enhanced,word embeddings semantic relationships,1.0,1.0,1.0,15.741000010166317
+Semantic + Reranker,Enhanced,neural networks attention,0.6666666666666666,0.6666666666666666,0.7039180890341347,91.73449996160343
+Semantic + Reranker,Enhanced,image recognition deep learning,0.3333333333333333,1.0,1.0,90.13810002943501
+Semantic + Reranker,Enhanced,generative models adversarial,0.3333333333333333,1.0,1.0,92.66219998244196
+Semantic + Reranker,Enhanced,word embeddings semantic relationships,0.3333333333333333,1.0,1.0,98.87769998749718
+Cross-Encoder Direct,Enhanced,neural networks attention,0.6666666666666666,0.6666666666666666,0.7039180890341347,68.99880000855774
+Cross-Encoder Direct,Enhanced,image recognition deep learning,0.3333333333333333,1.0,1.0,70.45860000653192
+Cross-Encoder Direct,Enhanced,generative models adversarial,0.3333333333333333,1.0,1.0,72.91749998694286
+Cross-Encoder Direct,Enhanced,word embeddings semantic relationships,0.3333333333333333,1.0,1.0,65.82800002070144
