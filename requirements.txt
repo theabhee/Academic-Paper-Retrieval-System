@@ -1,0 +1,11 @@
+nltk
+scikit-learn
+rank_bm25
+sentence-transformers
+torch
+pandas
+numpy
+matplotlib
+seaborn
+fastapi
+uvicorn

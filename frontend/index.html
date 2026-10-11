@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Academic Paper Information Retrieval Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="glow-bg"></div>
+
+  <!-- Header Navigation -->
+  <header class="navbar">
+    <div class="container nav-content">
+      <div class="brand">
+        <div class="logo-icon">🔬</div>
+        <div class="brand-text">
+          <h1>PaperIR <span class="badge-tag">AI Search</span></h1>
+          <p>Academic Information Retrieval & Vector Search</p>
+        </div>
+      </div>
+      
+      <div class="nav-stats" id="navStats">
+        <select id="datasetSelect" class="select-sm" style="background: rgba(255,255,255,0.06); color: var(--text-main); font-weight: 600; border-color: var(--panel-border-hover);">
+          <option value="sample" selected>⚡ Fast Sample (6 Papers)</option>
+          <option value="full">📚 Full arXiv (10,000 Papers)</option>
+        </select>
+        <div class="stat-pill"><span class="dot"></span> <span id="statDataset">sample_data.csv</span></div>
+        <div class="stat-pill">📄 <span id="statPaperCount">0</span> Papers</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Application Container -->
+  <main class="container main-content">
+    
+    <!-- Hero Search Section -->
+    <section class="search-hero">
+      <div class="search-card glass-panel">
+        <div class="search-input-wrapper">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="Search research papers (e.g., 'neural network attention transformer')..." autocomplete="off">
+          <button id="searchBtn" class="btn-primary">
+            <span>Search</span>
+            <div class="btn-spinner" id="searchSpinner"></div>
+          </button>
+        </div>
+
+        <!-- Method Selector Pills -->
+        <div class="method-bar">
+          <span class="bar-label">Retrieval Engine:</span>
+          <div class="method-pills">
+            <button class="pill active" data-method="semantic">🧠 Semantic Vector</button>
+            <button class="pill" data-method="bm25">⚡ BM25 Probabilistic</button>
+            <button class="pill" data-method="tfidf">📊 TF-IDF Cosine</button>
+            <button class="pill" data-method="boolean">🔍 Boolean AND</button>
+            <button class="pill pill-compare" data-method="compare_all">🔀 Compare All Methods</button>
+          </div>
+        </div>
+
+        <!-- Quick Sample Queries -->
+        <div class="sample-queries">
+          <span class="sample-label">Sample Queries:</span>
+          <button class="chip-query">neural networks attention</button>
+          <button class="chip-query">image recognition deep learning</button>
+          <button class="chip-query">generative models adversarial</button>
+          <button class="chip-query">word embeddings semantic relationships</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <nav class="view-tabs">
+      <button class="tab-btn active" data-tab="searchTab">🔍 Search Results</button>
+      <button class="tab-btn" data-tab="compareTab">🔀 Side-by-Side Comparison</button>
+      <button class="tab-btn" data-tab="browseTab">📚 Browse All Papers (<span id="totalBrowseCount">0</span>)</button>
+      <button class="tab-btn" data-tab="evalTab">📊 Model Metrics Dashboard</button>
+    </nav>
+
+    <!-- TAB 1: Search Results View -->
+    <section id="searchTab" class="tab-content active">
+      <div class="results-header">
+        <div class="results-summary" id="resultsSummary">
+          Enter a query above to search papers across titles and abstracts.
+        </div>
+        <div class="results-controls">
+          <label for="topKSelect">Top Results:</label>
+          <select id="topKSelect" class="select-sm">
+            <option value="5">5 Results</option>
+            <option value="10" selected>10 Results</option>
+            <option value="20">20 Results</option>
+            <option value="50">50 Results</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="paper-list" id="paperList">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <!-- TAB 2: Side-by-Side Model Comparison -->
+    <section id="compareTab" class="tab-content">
+      <div class="section-intro">
+        <h3>🔀 Side-by-Side Retrieval Model Comparison</h3>
+        <p>Compare top ranking papers returned by Boolean, TF-IDF, BM25, and Semantic Search for the exact same query.</p>
+      </div>
+
+      <div class="compare-grid" id="compareGrid">
+        <!-- 4 columns rendered dynamically -->
+        <div class="compare-col">
+          <div class="col-header header-semantic">🧠 Semantic Vector</div>
+          <div class="col-results" id="colSemantic">Run a search with 'Compare All Methods' selected.</div>
+        </div>
+        <div class="compare-col">
+          <div class="col-header header-bm25">⚡ BM25</div>
+          <div class="col-results" id="colBm25">Run a search with 'Compare All Methods' selected.</div>
+        </div>
+        <div class="compare-col">
+          <div class="col-header header-tfidf">📊 TF-IDF</div>
+          <div class="col-results" id="colTfidf">Run a search with 'Compare All Methods' selected.</div>
+        </div>
+        <div class="compare-col">
+          <div class="col-header header-boolean">🔍 Boolean</div>
+          <div class="col-results" id="colBoolean">Run a search with 'Compare All Methods' selected.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: Browse All Papers -->
+    <section id="browseTab" class="tab-content">
+      <div class="browse-bar">
+        <input type="text" id="browseSearchInput" placeholder="Filter paper titles in dataset..." class="input-sm">
+      </div>
+
+      <div class="paper-grid" id="browsePaperGrid">
+        <!-- Papers listed here -->
+      </div>
+    </section>
+
+    <!-- TAB 4: Evaluation Benchmark Dashboard -->
+    <section id="evalTab" class="tab-content">
+      <div class="eval-grid">
+        <div class="eval-card glass-panel">
+          <h3>📊 Model Accuracy Metrics</h3>
+          <p class="subtitle">Evaluated against standard benchmark ground-truth queries.</p>
+          <div class="table-responsive">
+            <table class="metrics-table">
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th>Precision@1</th>
+                  <th>Precision@3</th>
+                  <th>Recall@3</th>
+                  <th>F1-Score</th>
+                </tr>
+              </thead>
+              <tbody id="metricsTableBody">
+                <!-- Metrics populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="eval-card glass-panel">
+          <h3>📈 IR Metrics Chart</h3>
+          <div class="chart-container">
+            <canvas id="metricsChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-content">
+      <p>Academic Paper Information Retrieval Engine &bull; Built with FastAPI & NLTK & Sentence-Transformers</p>
+    </div>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
